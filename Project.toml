@@ -1,0 +1,13 @@
+name = "TriCo"
+uuid = "c44b6a9e-8d55-4e9f-9b75-3f134b3e6f5d"
+version = "0.1.0"
+
+[compat]
+julia = "1.11"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b50"
+
+[targets]
+test = ["Test"]
+

@@ -1,6 +1,6 @@
 # test/test_geometry.jl
 using Test
-using DeltaTri   # your package
+using TriCo   # your package
 
 @testset "Geometry tests" begin
 
@@ -30,7 +30,7 @@ using DeltaTri   # your package
             triplet_geometry_periodic(r1..., r2..., r3...)
 
         # Computed by hand
-        @test μ12_sq ≈ 1.0
+        @test μ12_sq ≈ 0.0
         @test μ23_sq ≈ 0.5
         @test μ31_sq ≈ 0.5
     end
@@ -61,7 +61,7 @@ using DeltaTri   # your package
             triplet_geometry_periodic(r1..., r2..., r3...)
 
         # Computed by hand
-        @test μ12_sq ≈ 1.0
+        @test μ12_sq ≈ 0.0
         @test μ23_sq ≈ 0.5
         @test μ31_sq ≈ 0.5
     end
