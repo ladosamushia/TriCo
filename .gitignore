@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.env
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Julia
+*.ji
+Manifest.toml
+
+# C/C++/Fortran
+*.o
+*.a
+*.so
+*.dSYM/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Editor/OS
+.DS_Store
+.vscode/
+.idea/
+
+# Large data (handled by Git LFS if needed)
+data/
