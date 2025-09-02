@@ -4,7 +4,7 @@ using TriCo
 using Base.Threads
 
 # ---------- Parameters ----------
-N    = parse(Int,    get(ENV, "TRICO_N",    "100000"))
+N    = parse(Int,    get(ENV, "TRICO_N",    "200000"))
 L    = parse(Float64,get(ENV, "TRICO_L",    "2000"))
 rmin = parse(Float64,get(ENV, "TRICO_RMIN", "5.0"))
 rmax = parse(Float64,get(ENV, "TRICO_RMAX", "60.0"))
