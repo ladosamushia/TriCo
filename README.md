@@ -31,7 +31,7 @@ using Pkg
 Pkg.instantiate()   # install dependencies if needed
 ```
 
-TriCo is not in the Julia registry; use it via `--project` or `Pkg.develop`.
+TriCo is not (yet) in the Julia registry; use it via `--project` or `Pkg.develop`.
 
 ---
 
@@ -76,13 +76,16 @@ H = count_triangles_periodic!(X, Y, Z;
 
 ## Example scripts
 
-We provide two ready-to-run scripts in `scripts/`:
+We provide ready-to-run scripts in `scripts/`:
 
 - **`scripts/random_cube.jl`**  
   Non-periodic cube with random points.
 
 - **`scripts/random_cube_periodic.jl`**  
   Periodic cube (with optional different `Lx, Ly, Lz`).
+
+- **`scripts/fits_to_hist.jl`**  
+  Build histograms directly from FITS files.
 
 Run them with multiple threads, e.g.:
 
@@ -94,7 +97,29 @@ JULIA_NUM_THREADS=8 julia --project=. scripts/random_cube_periodic.jl
 Parameters (number of points, box size, bins, etc.) can be overridden via environment variables, e.g.:
 
 ```bash
-TRICO_N=20000 TRICO_RMAX=80 TRICO_NR=60 JULIA_NUM_THREADS=auto julia --project=. scripts/random_cube_periodic.jl
+TRICO_N=20000 TRICO_RMAX=80 TRICO_NR=60 JULIA_NUM_THREADS=auto \
+julia --project=. scripts/random_cube_periodic.jl
+```
+
+---
+
+## Command-line usage: `fits_to_hist.jl`
+
+You can run `scripts/fits_to_hist.jl` to build histograms directly from FITS files.
+
+**Non-periodic example:**
+```bash
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
+  --fits galaxies.fits --xcol X --ycol Y --zcol Z \
+  --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2
+```
+
+**Periodic example (z is LOS):**
+```bash
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
+  --fits galaxies.fits --xcol X --ycol Y --zcol Z \
+  --periodic --Lx 2000 --Ly 2000 --Lz 2000 \
+  --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2
 ```
 
 ---
@@ -112,6 +137,7 @@ TRICO_N=20000 TRICO_RMAX=80 TRICO_NR=60 JULIA_NUM_THREADS=auto julia --project=.
   scripts/
     random_cube.jl
     random_cube_periodic.jl
+    fits_to_hist.jl
   test/
     runtests.jl
   ```
