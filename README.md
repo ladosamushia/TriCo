@@ -122,6 +122,22 @@ JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
   --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2
 ```
 
+**Saving output:**
+You can also save the histogram directly to a .npz file (readable in Julia and Python) with --out:
+```bash
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
+  --fits galaxies.fits --xcol X --ycol Y --zcol Z \
+  --periodic --Lx 2000 --Ly 2000 --Lz 2000 \
+  --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2 \
+  --out triangles.npz
+```
+
+The `.npz` file contains:
+
+- `hist` — 4D array of counts, shape `(Nr, Nr, Nμ, Nμ)`
+- `r_edges`, `mu_edges` — bin edges used for r and μ
+- `meta_keys`, `meta_values` — metadata such as binning parameters, periodicity, and box size
+
 ---
 
 ## Development notes
