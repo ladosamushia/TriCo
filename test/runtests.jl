@@ -1,8 +1,9 @@
-import Pkg
-Pkg.activate(joinpath(@__DIR__, ".."))  # activate TriCo's project
-
 using Test
 using TriCo
 
-include("test_geometry.jl")
+@info "Running TriCo tests…"
+include("test_nonperiodic.jl")
+include("test_periodic.jl")
+include("test_edges.jl")
+include("test_regression.jl")
 
