@@ -2,8 +2,7 @@ using Test
 using TriCo
 
 @info "Running TriCo tests…"
-include("test_nonperiodic.jl")
-include("test_periodic.jl")
-include("test_edges.jl")
-include("test_regression.jl")
+include("test_nonperiodic.jl")   # keep your existing basics, if you want
+include("test_periodic.jl")      # keep your existing basics, if you want
+include("test_bruteforce.jl")    # the new reference checks
 
