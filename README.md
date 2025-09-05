@@ -4,12 +4,15 @@
 It is designed for cosmology applications (e.g. galaxy clustering) but can be applied
 to any large point cloud where three-point statistics are needed.
 
-Features:
+---
+
+## Features
 
 - Counts triangles with constraints on side lengths `r_ij` and line-of-sight cosines `μ_ij`.
-- Bins triangles into histograms of `(r12, r23, μ12, μ13)` (4D joint histogram).
-- Supports both **non-periodic** and **periodic** boxes (with different lengths in x, y, z).
-- Periodic mode treats **z as the line of sight** (`μ² = Δz² / r²` with minimum-image distances).
+- Bins triangles into a **4D histogram** of `(r12, r23, μ12, μ13)`.
+- Supports both:
+  - **Non-periodic boxes** with true line-of-sight (pair midpoint definition).
+  - **Periodic boxes** with arbitrary lengths in `x,y,z` and **z as LOS** (`μ² = Δz² / r²`, min-image convention).
 - Parallelized with `Threads.@threads` and designed for HPC workloads.
 
 ---
@@ -35,26 +38,25 @@ TriCo is not (yet) in the Julia registry; use it via `--project` or `Pkg.develop
 
 ---
 
-## Usage
+## Usage from Julia
 
-### Non-periodic cube
+### Non-periodic example
 
 ```julia
 using TriCo
 
-# Generate some points
 N = 10_000
 X, Y, Z = randn(N), randn(N), randn(N)
 
-# Count triangles
-H = count_triangles!(X, Y, Z; rmin=5.0, rmax=60.0, Nr=55,
-                     μmax=0.9, Nμ=2, cellsize=60.0)
+H = count_triangles_grid!(X, Y, Z;
+                          rmin=5.0, rmax=60.0, Nr=55,
+                          μmax=0.9, Nμ=2, cellsize=60.0)
 
-@show size(H.h)     # (Nr, Nr, Nμ, Nμ)
-@show sum(H.h)      # total number of triangles
+@show size(H.h)   # (Nr, Nr, Nμ, Nμ)
+@show sum(H.h)    # total number of triangles
 ```
 
-### Periodic cube (different lengths allowed)
+### Periodic example
 
 ```julia
 using TriCo
@@ -63,10 +65,10 @@ N = 10_000
 Lx, Ly, Lz = 2000.0, 2000.0, 2000.0
 X, Y, Z = Lx .* rand(N), Ly .* rand(N), Lz .* rand(N)
 
-H = count_triangles_periodic!(X, Y, Z;
-                              Lx=Lx, Ly=Ly, Lz=Lz,
-                              rmin=5.0, rmax=60.0, Nr=55,
-                              μmax=0.9, Nμ=2, cellsize=60.0)
+H = count_triangles_periodic_grid!(X, Y, Z;
+                                   Lx=Lx, Ly=Ly, Lz=Lz,
+                                   rmin=5.0, rmax=60.0, Nr=55,
+                                   μmax=0.9, Nμ=2, cellsize=60.0)
 
 @show size(H.h)
 @show sum(H.h)
@@ -76,67 +78,50 @@ H = count_triangles_periodic!(X, Y, Z;
 
 ## Example scripts
 
-We provide ready-to-run scripts in `scripts/`:
+Scripts in `scripts/` provide ready-to-run examples:
 
 - **`scripts/random_cube.jl`**  
   Non-periodic cube with random points.
 
 - **`scripts/random_cube_periodic.jl`**  
-  Periodic cube (with optional different `Lx, Ly, Lz`).
+  Periodic cube (with arbitrary box sizes).
 
 - **`scripts/fits_to_hist.jl`**  
-  Build histograms directly from FITS files.
+  Build histograms directly from FITS files and save to `.npz`.
 
-Run them with multiple threads, e.g.:
+Run them with multiple threads:
 
 ```bash
 JULIA_NUM_THREADS=8 julia --project=. scripts/random_cube.jl
 JULIA_NUM_THREADS=8 julia --project=. scripts/random_cube_periodic.jl
 ```
 
-Parameters (number of points, box size, bins, etc.) can be overridden via environment variables, e.g.:
-
-```bash
-TRICO_N=20000 TRICO_RMAX=80 TRICO_NR=60 JULIA_NUM_THREADS=auto \
-julia --project=. scripts/random_cube_periodic.jl
-```
+Parameters (e.g., number of points, box size, bins) can be overridden via environment variables or command-line options.
 
 ---
 
 ## Command-line usage: `fits_to_hist.jl`
 
-You can run `scripts/fits_to_hist.jl` to build histograms directly from FITS files.
+This script builds histograms directly from FITS files.
 
 **Non-periodic example:**
 ```bash
-JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
-  --fits galaxies.fits --xcol X --ycol Y --zcol Z \
-  --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl   --fits galaxies.fits --xcol X --ycol Y --zcol Z   --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2   --out triangles.npz
 ```
 
 **Periodic example (z is LOS):**
 ```bash
-JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
-  --fits galaxies.fits --xcol X --ycol Y --zcol Z \
-  --periodic --Lx 2000 --Ly 2000 --Lz 2000 \
-  --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl   --fits galaxies.fits --xcol X --ycol Y --zcol Z   --periodic --Lx 2000 --Ly 2000 --Lz 2000   --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2   --out triangles_box.npz
 ```
 
-**Saving output:**
-You can also save the histogram directly to a .npz file (readable in Julia and Python) with --out:
-```bash
-JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
-  --fits galaxies.fits --xcol X --ycol Y --zcol Z \
-  --periodic --Lx 2000 --Ly 2000 --Lz 2000 \
-  --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2 \
-  --out triangles.npz
-```
+### Output format
 
 The `.npz` file contains:
 
-- `hist` — 4D array of counts, shape `(Nr, Nr, Nμ, Nμ)`
-- `r_edges`, `mu_edges` — bin edges used for r and μ
-- `meta_keys`, `meta_values` — metadata such as binning parameters, periodicity, and box size
+- `hist` — the 4D histogram array of shape `(Nr, Nr, Nμ, Nμ)`
+
+No metadata or bin edges are saved in this version.  
+You can compute bin edges separately in Julia/Python if needed.
 
 ---
 
@@ -150,6 +135,7 @@ The `.npz` file contains:
     binning.jl
     grid.jl
     triangles.jl
+    io_save.jl
   scripts/
     random_cube.jl
     random_cube_periodic.jl
@@ -159,9 +145,8 @@ The `.npz` file contains:
   ```
 
 - Only edit `Project.toml` when adding/removing dependencies.
-- `Manifest.toml` is machine-generated — no need to edit it manually.
-- For smooth development, install [Revise.jl](https://timholy.github.io/Revise.jl/stable/)
-  so code changes are picked up without restarting Julia.
+- `Manifest.toml` is auto-generated.
+- For smoother development, use [Revise.jl](https://timholy.github.io/Revise.jl/stable/) to pick up changes automatically.
 
 ---
 

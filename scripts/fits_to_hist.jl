@@ -2,15 +2,15 @@
 # scripts/fits_to_hist.jl
 # --------------------------------------------------------------
 # Build a histogram from a FITS table using grid-accelerated kernels:
-#   - count_triangles_grid!                (non-periodic, true LOS)
-#   - count_triangles_periodic_grid!       (periodic, min-image, z-LOS)
-# Save to .npz with IOSave.save_hist_npz if --out is provided.
+#   - TriCo.count_triangles_grid!          (non-periodic, true LOS)
+#   - TriCo.count_triangles_periodic_grid! (periodic, min-image, z-LOS)
+# Save ONLY the 4D histogram array to .npz (key = "hist").
 # --------------------------------------------------------------
 
 using TriCo
+using FITSIO
+using NPZ
 using Base.Threads
-# If your NPZ helpers are in a separate module:
-# using IOSave
 
 # --- tiny arg parser (no deps) ---
 function parse_args(args::Vector{String})
@@ -65,8 +65,23 @@ function usage()
       --Lx 2000 --Ly 2000 --Lz 2000  box sizes (required if --periodic)
 
     Output:
-      --out triangles.npz          save histogram to NPZ (recommended for Julia+Python)
+      --out triangles.npz          save ONLY the histogram to NPZ (key: "hist")
     """)
+end
+
+# --- FITS reader (table HDU, named columns) ---
+function read_xyz_fits(path::AbstractString; xcol::AbstractString="X",
+                       ycol::AbstractString="Y", zcol::AbstractString="Z",
+                       hdu::Integer=2)
+    X = Y = Z = nothing
+    FITS(path, "r") do f
+        (hdu < 1 || hdu > length(f)) && error("HDU=$hdu out of range for $path")
+        t = f[hdu]
+        X = read(t, xcol)
+        Y = read(t, ycol)
+        Z = read(t, zcol)
+    end
+    return collect(Float64.(X)), collect(Float64.(Y)), collect(Float64.(Z))
 end
 
 function main()
@@ -101,6 +116,19 @@ function main()
     # output path (optional)
     outpath = getopt(d, "--out", "")
 
+    # basic sanity
+    @assert rmin < rmax "Require rmin < rmax"
+    @assert 0.0 < mumax <= 1.0 "μmax must be in (0,1]"
+    @assert cellsize >= rmax "cellsize must be ≥ rmax to avoid missing neighbors"
+    if periodic
+        @assert all(!isnan.((Lx, Ly, Lz))) "Periodic mode requires --Lx, --Ly, --Lz"
+    end
+    if !isempty(outpath)
+        if !endswith(lowercase(outpath), ".npz")
+            error("--out must end with .npz")
+        end
+    end
+
     println("Threads: ", Threads.nthreads())
     println("Reading FITS: $fits (HDU=$hdu, cols: $xcol,$ycol,$zcol)")
     X, Y, Z = read_xyz_fits(fits; xcol=xcol, ycol=ycol, zcol=zcol, hdu=hdu)
@@ -108,18 +136,17 @@ function main()
 
     # compute histogram (GRID kernels)
     println("Computing histogram…")
-    H = nothing
-    if periodic
+    H = if periodic
         # ensure coordinates are within [0,L)
         @inbounds begin
             X .= mod.(X, Lx); Y .= mod.(Y, Ly); Z .= mod.(Z, Lz)
         end
-        H = TriCo.count_triangles_periodic_grid!(X, Y, Z;
+        TriCo.count_triangles_periodic_grid!(X, Y, Z;
             Lx=Lx, Ly=Ly, Lz=Lz,
             rmin=rmin, rmax=rmax, Nr=Nr,
             μmax=mumax, Nμ=Nmu, cellsize=cellsize)
     else
-        H = TriCo.count_triangles_grid!(X, Y, Z;
+        TriCo.count_triangles_grid!(X, Y, Z;
             rmin=rmin, rmax=rmax, Nr=Nr,
             μmax=mumax, Nμ=Nmu, cellsize=cellsize)
     end
@@ -129,23 +156,10 @@ function main()
     println("Total triangles: ", sum(H.h))
     println("Nonzero bins   : ", count(!=(0), H.h), " / ", Nr*Nr*Nmu*Nmu)
 
-    # save if requested
+    # save ONLY the histogram array when requested
     if !isempty(outpath)
-        low = lowercase(outpath)
-        if endswith(low, ".npz")
-            # if you still want NPZ support, keep your old call here
-            save_hist_npz(outpath, H; rmin=rmin, rmax=rmax, Nr=Nr,
-                          mumax=mumax, Nmu=Nmu,
-                          periodic=periodic, Lx=Lx, Ly=Ly, Lz=Lz)
-            println("Saved NPZ -> $outpath")
-        elseif endswith(low, ".h5") || endswith(low, ".hdf5")
-            save_hist_h5(outpath, H; rmin=rmin, rmax=rmax, Nr=Nr,
-                         mumax=mumax, Nmu=Nmu,
-                         periodic=periodic, Lx=Lx, Ly=Ly, Lz=Lz)
-            println("Saved HDF5 -> $outpath")
-        else
-            println("WARNING: --out must end with .npz, .h5, or .hdf5; skipping save.")
-        end
+        NPZ.npzwrite(outpath, Dict("hist" => H.h))
+        println("Saved NPZ (hist only) -> $outpath")
     end
 
     println("Done.")
