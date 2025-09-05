@@ -1,17 +1,12 @@
 module TriCo
 
-include("geometry.jl")
-include("binning.jl")
-include("grid.jl")
 include("triangles.jl")
 include("io.jl")
-include("io_save.jl")
+include("io_save.jl")  # defines save_hist_h5/load_hist_h5 here
 
-using .IOSave: save_hist_npz, load_hist_npz
-
-export count_triangles!, count_triangles_periodic!,
+export count_triangles_grid!, count_triangles_periodic_grid!,
        read_xyz_fits,
-       save_hist_npz, load_hist_npz
+       save_hist_h5, load_hist_h5   # <- add these
 
 end
 

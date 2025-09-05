@@ -1,12 +1,16 @@
 #!/usr/bin/env julia
+# scripts/fits_to_hist.jl
 # --------------------------------------------------------------
-# Use TriCo.read_xyz_fits + count_triangles!(...) or
-# count_triangles_periodic!(...) to build histogram from FITS.
-# Now supports: --out results.npz   (saves NPZ for Julia/Python)
+# Build a histogram from a FITS table using grid-accelerated kernels:
+#   - count_triangles_grid!                (non-periodic, true LOS)
+#   - count_triangles_periodic_grid!       (periodic, min-image, z-LOS)
+# Save to .npz with IOSave.save_hist_npz if --out is provided.
 # --------------------------------------------------------------
 
 using TriCo
 using Base.Threads
+# If your NPZ helpers are in a separate module:
+# using IOSave
 
 # --- tiny arg parser (no deps) ---
 function parse_args(args::Vector{String})
@@ -62,17 +66,6 @@ function usage()
 
     Output:
       --out triangles.npz          save histogram to NPZ (recommended for Julia+Python)
-
-    Examples:
-      JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \\
-        --fits galaxies.fits --xcol X --ycol Y --zcol Z \\
-        --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2
-
-      JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \\
-        --fits galaxies.fits --xcol X --ycol Y --zcol Z \\
-        --periodic --Lx 2000 --Ly 2000 --Lz 2000 \\
-        --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2 \\
-        --out triangles.npz
     """)
 end
 
@@ -113,7 +106,7 @@ function main()
     X, Y, Z = read_xyz_fits(fits; xcol=xcol, ycol=ycol, zcol=zcol, hdu=hdu)
     println("Loaded ", length(X), " rows.")
 
-    # compute histogram
+    # compute histogram (GRID kernels)
     println("Computing histogram…")
     H = nothing
     if periodic
@@ -121,14 +114,14 @@ function main()
         @inbounds begin
             X .= mod.(X, Lx); Y .= mod.(Y, Ly); Z .= mod.(Z, Lz)
         end
-        H = count_triangles_periodic!(X, Y, Z;
-                                      Lx=Lx, Ly=Ly, Lz=Lz,
-                                      rmin=rmin, rmax=rmax, Nr=Nr,
-                                      μmax=mumax, Nμ=Nmu, cellsize=cellsize)
+        H = TriCo.count_triangles_periodic_grid!(X, Y, Z;
+            Lx=Lx, Ly=Ly, Lz=Lz,
+            rmin=rmin, rmax=rmax, Nr=Nr,
+            μmax=mumax, Nμ=Nmu, cellsize=cellsize)
     else
-        H = count_triangles!(X, Y, Z;
-                             rmin=rmin, rmax=rmax, Nr=Nr,
-                             μmax=mumax, Nμ=Nmu, cellsize=cellsize)
+        H = TriCo.count_triangles_grid!(X, Y, Z;
+            rmin=rmin, rmax=rmax, Nr=Nr,
+            μmax=mumax, Nμ=Nmu, cellsize=cellsize)
     end
 
     # summary
@@ -138,13 +131,20 @@ function main()
 
     # save if requested
     if !isempty(outpath)
-        if endswith(lowercase(outpath), ".npz")
+        low = lowercase(outpath)
+        if endswith(low, ".npz")
+            # if you still want NPZ support, keep your old call here
             save_hist_npz(outpath, H; rmin=rmin, rmax=rmax, Nr=Nr,
                           mumax=mumax, Nmu=Nmu,
                           periodic=periodic, Lx=Lx, Ly=Ly, Lz=Lz)
             println("Saved NPZ -> $outpath")
+        elseif endswith(low, ".h5") || endswith(low, ".hdf5")
+            save_hist_h5(outpath, H; rmin=rmin, rmax=rmax, Nr=Nr,
+                         mumax=mumax, Nmu=Nmu,
+                         periodic=periodic, Lx=Lx, Ly=Ly, Lz=Lz)
+            println("Saved HDF5 -> $outpath")
         else
-            println("WARNING: --out path does not end with .npz; skipping save. (Expected NPZ)")
+            println("WARNING: --out must end with .npz, .h5, or .hdf5; skipping save.")
         end
     end
 
