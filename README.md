@@ -80,39 +80,100 @@ H = count_triangles_periodic_grid!(X, Y, Z;
 
 Scripts in `scripts/` provide ready-to-run examples:
 
-- **`scripts/random_cube.jl`**  
-  Non-periodic cube with random points.
+- **`scripts/random_cube.jl`**
+  Generate a cube of random points and count triangles.
+  Supports both **non-periodic** and **periodic** boxes (toggle with `TRICO_PERIODIC`).
 
-- **`scripts/random_cube_periodic.jl`**  
-  Periodic cube (with arbitrary box sizes).
-
-- **`scripts/fits_to_hist.jl`**  
+- **`scripts/fits_to_hist.jl`**
   Build histograms directly from FITS files and save to `.npz`.
 
 Run them with multiple threads:
 
 ```bash
 JULIA_NUM_THREADS=8 julia --project=. scripts/random_cube.jl
-JULIA_NUM_THREADS=8 julia --project=. scripts/random_cube_periodic.jl
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl --fits galaxies.fits
 ```
-
-Parameters (e.g., number of points, box size, bins) can be overridden via environment variables or command-line options.
 
 ---
 
-## Command-line usage: `fits_to_hist.jl`
+## `random_cube.jl` usage
 
-This script builds histograms directly from FITS files.
+This script uses environment variables for configuration.
 
-**Non-periodic example:**
+**Example (all options set):**
+
 ```bash
-JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl   --fits galaxies.fits --xcol X --ycol Y --zcol Z   --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2   --out triangles.npz
+TRICO_N=100000 \
+TRICO_L=1500 \
+TRICO_RMIN=2.0 \
+TRICO_RMAX=50.0 \
+TRICO_NR=40 \
+TRICO_MUMAX=0.8 \
+TRICO_NMU=4 \
+TRICO_CELL=50.0 \
+TRICO_SEED=42 \
+TRICO_PERIODIC=1 \
+JULIA_NUM_THREADS=8 \
+julia --project=. scripts/random_cube.jl
 ```
 
-**Periodic example (z is LOS):**
+**Defaults (if not set):**
+
+- `TRICO_N=200000` — number of points
+- `TRICO_L=2000.0` — box length (same for x,y,z)
+- `TRICO_RMIN=5.0`, `TRICO_RMAX=60.0` — radial bin range
+- `TRICO_NR=55` — number of r bins
+- `TRICO_MUMAX=0.9` — maximum μ
+- `TRICO_NMU=2` — number of μ bins
+- `TRICO_CELL=rmax` — neighbor grid cell size
+- `TRICO_SEED=12345` — RNG seed
+- `TRICO_PERIODIC=0` — 0 = non-periodic, 1 = periodic
+
+---
+
+## `fits_to_hist.jl` usage
+
+This script takes command-line flags.
+
+**Non-periodic example (all options set):**
+
 ```bash
-JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl   --fits galaxies.fits --xcol X --ycol Y --zcol Z   --periodic --Lx 2000 --Ly 2000 --Lz 2000   --rmin 5 --rmax 60 --Nr 55 --mumax 0.9 --Nmu 2   --out triangles_box.npz
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
+  --fits galaxies.fits \
+  --xcol X --ycol Y --zcol Z --hdu 2 \
+  --rmin 5.0 --rmax 60.0 --Nr 55 \
+  --mumax 0.9 --Nmu 2 \
+  --cellsize 60.0 \
+  --out triangles.npz
 ```
+
+**Periodic example (all options set):**
+
+```bash
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
+  --fits galaxies.fits \
+  --xcol X --ycol Y --zcol Z --hdu 2 \
+  --rmin 5.0 --rmax 60.0 --Nr 55 \
+  --mumax 0.9 --Nmu 2 \
+  --cellsize 60.0 \
+  --periodic --Lx 2000 --Ly 2000 --Lz 2000 \
+  --out triangles_box.npz
+```
+
+**Defaults (if not set):**
+
+- `--xcol=X`, `--ycol=Y`, `--zcol=Z` — FITS column names
+- `--hdu=2` — FITS HDU index
+- `--rmin=5.0`, `--rmax=60.0` — radial bin range
+- `--Nr=55` — number of r bins
+- `--mumax=0.9` — maximum μ
+- `--Nmu=2` — number of μ bins
+- `--cellsize=rmax` — neighbor grid cell size
+- `--periodic` — disabled unless explicitly set
+- `--Lx, --Ly, --Lz` — required only if `--periodic`
+- `--out` — no file saved unless provided (must end with `.npz`)
+
+---
 
 ### Output format
 
