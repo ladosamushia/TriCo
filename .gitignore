@@ -17,6 +17,9 @@ Manifest.toml
 *.so
 *.dSYM/
 
+# data
+*.npz
+
 # Notebooks
 .ipynb_checkpoints/
 

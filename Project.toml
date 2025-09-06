@@ -4,15 +4,10 @@ version = "1.0.1"
 
 [deps]
 FITSIO = "525bcba6-941b-5504-bd06-fd0dc1a4d2eb"
-HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
-NPZ = "15e1cf62-19b3-5cfa-8e77-841668bca605"
+HDF5   = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+NPZ    = "15e1cf62-19b3-5cfa-8e77-841668bca605"
 
 [compat]
 HDF5 = "0.17.2"
 julia = "1.11"
 
-[extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b50"
-
-[targets]
-test = ["Test"]
