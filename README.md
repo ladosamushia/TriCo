@@ -80,11 +80,11 @@ H = count_triangles_periodic_grid!(X, Y, Z;
 
 Scripts in `scripts/` provide ready-to-run examples:
 
-- **`scripts/random_cube.jl`**
-  Generate a cube of random points and count triangles.
-  Supports both **non-periodic** and **periodic** boxes (toggle with `TRICO_PERIODIC`).
+- **`scripts/random_cube.jl`**  
+  Generate a cube of random points and count triangles.  
+  Controlled via environment variables (see below).
 
-- **`scripts/fits_to_hist.jl`**
+- **`scripts/fits_to_hist.jl`**  
   Build histograms directly from FITS files and save to `.npz`.
 
 Run them with multiple threads:
@@ -103,18 +103,7 @@ This script uses environment variables for configuration.
 **Example (all options set):**
 
 ```bash
-TRICO_N=100000 \
-TRICO_L=1500 \
-TRICO_RMIN=2.0 \
-TRICO_RMAX=50.0 \
-TRICO_NR=40 \
-TRICO_MUMAX=0.8 \
-TRICO_NMU=4 \
-TRICO_CELL=50.0 \
-TRICO_SEED=42 \
-TRICO_PERIODIC=1 \
-JULIA_NUM_THREADS=8 \
-julia --project=. scripts/random_cube.jl
+TRICO_N=100000 TRICO_L=1500 TRICO_RMIN=2.0 TRICO_RMAX=50.0 TRICO_NR=40 TRICO_MUMAX=0.8 TRICO_NMU=4 TRICO_CELL=50.0 TRICO_SEED=42 TRICO_PERIODIC=1 JULIA_NUM_THREADS=8 julia --project=. scripts/random_cube.jl
 ```
 
 **Defaults (if not set):**
@@ -138,26 +127,13 @@ This script takes command-line flags.
 **Non-periodic example (all options set):**
 
 ```bash
-JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
-  --fits galaxies.fits \
-  --xcol X --ycol Y --zcol Z --hdu 2 \
-  --rmin 5.0 --rmax 60.0 --Nr 55 \
-  --mumax 0.9 --Nmu 2 \
-  --cellsize 60.0 \
-  --out triangles.npz
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl   --fits galaxies.fits   --xcol X --ycol Y --zcol Z --hdu 2   --rmin 5.0 --rmax 60.0 --Nr 55   --mumax 0.9 --Nmu 2   --cellsize 60.0   --out triangles.npz
 ```
 
 **Periodic example (all options set):**
 
 ```bash
-JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
-  --fits galaxies.fits \
-  --xcol X --ycol Y --zcol Z --hdu 2 \
-  --rmin 5.0 --rmax 60.0 --Nr 55 \
-  --mumax 0.9 --Nmu 2 \
-  --cellsize 60.0 \
-  --periodic --Lx 2000 --Ly 2000 --Lz 2000 \
-  --out triangles_box.npz
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl   --fits galaxies.fits   --xcol X --ycol Y --zcol Z --hdu 2   --rmin 5.0 --rmax 60.0 --Nr 55   --mumax 0.9 --Nmu 2   --cellsize 60.0   --periodic --Lx 2000 --Ly 2000 --Lz 2000   --out triangles_box.npz
 ```
 
 **Defaults (if not set):**
@@ -186,24 +162,35 @@ You can compute bin edges separately in Julia/Python if needed.
 
 ---
 
+## Tests
+
+Unit tests are in `test/`. They include:
+
+- **Brute-force comparison tests** that generate small random point sets, compute triangle histograms by exhaustive search, and verify **bin-by-bin equality** against the accelerated grid-based implementation (`count_triangles_grid!`, `count_triangles_periodic_grid!`).
+
+Run tests with:
+
+```bash
+JULIA_NUM_THREADS=1 julia --project=. test/runtests.jl
+```
+
+---
+
 ## Development notes
 
-- TriCo is structured as a Julia package:
-  ```
-  src/
-    TriCo.jl
-    geometry.jl
-    binning.jl
-    grid.jl
-    triangles.jl
-    io_save.jl
-  scripts/
-    random_cube.jl
-    random_cube_periodic.jl
-    fits_to_hist.jl
-  test/
-    runtests.jl
-  ```
+Current repo structure:
+
+```
+src/
+  TriCo.jl
+  triangles.jl
+  io_save.jl
+scripts/
+  random_cube.jl
+  fits_to_hist.jl
+test/
+  runtests.jl
+```
 
 - Only edit `Project.toml` when adding/removing dependencies.
 - `Manifest.toml` is auto-generated.
