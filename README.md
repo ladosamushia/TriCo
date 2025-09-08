@@ -229,6 +229,100 @@ Periodic mode (works in both single and mixed):
 **Output**
 - `--out FILE.npz` — save histogram to NPZ (default: none, must end with `.npz`)
 
+## `fits_to_pairs.jl` usage
+
+This script builds **pair histograms** directly from FITS files.
+It supports both **single-catalog** (auto-pairs) and **cross-catalog** counting.
+
+### Single catalog
+
+```bash
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_pairs.jl \
+  --fits galaxies.fits \
+  --xcol X --ycol Y --zcol Z --hdu 2 \
+  --rmin 5 --rmax 60 --Nr 55 \
+  --mumax 0.9 --Nmu 2 \
+  --cellsize 60 \
+  --out pairs.npz
+```
+
+### Cross catalogs (A vs B)
+
+```bash
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_pairs.jl \
+  --fitsA galaxies_A.fits --fitsB galaxies_B.fits \
+  --xcolA X --ycolA Y --zcolA Z --hduA 2 \
+  --xcolB X --ycolB Y --zcolB Z --hduB 2 \
+  --rmin 5 --rmax 60 --Nr 55 \
+  --mumax 0.9 --Nmu 2 \
+  --cellsize 60 \
+  --out pairs_AB.npz
+```
+
+### Periodic mode (works in both single and cross)
+
+```bash
+--periodic --Lx 2000 --Ly 2000 --Lz 2000
+```
+
+---
+
+### Options
+
+**Catalog inputs**
+- `--fits PATH` — single-catalog mode
+- `--fitsA PATH` — cross mode, catalog A
+- `--fitsB PATH` — cross mode, catalog B
+
+**FITS columns (apply globally unless per-catalog given)**
+- `--xcol=X`, `--ycol=Y`, `--zcol=Z` — column names (defaults: `X,Y,Z`)
+- `--hdu=2` — HDU index (default: 2)
+- `--xcolA`, `--ycolB`, `--zcolA`, `--hduA`, `--hduB`, etc. — per-catalog overrides
+
+**Selection & binning**
+- `--rmin=5.0`, `--rmax=60.0` — radial bin range
+- `--Nr=55` — number of r bins
+- `--mumax=0.9` — maximum μ (0 < μ ≤ 1)
+- `--Nmu=2` — number of μ bins
+
+**Neighbor grid**
+- `--cellsize=rmax` — grid cell size (must be ≥ rmax, default = rmax)
+
+**Periodic box (z = LOS)**
+- `--periodic` — enable periodic mode (default: off)
+- `--Lx=2000`, `--Ly=2000`, `--Lz=2000` — box sizes (required if `--periodic`)
+
+**Output**
+- `--out FILE.npz` — save histogram to NPZ (default: none, must end with `.npz`)
+
+---
+
+### Defaults summary
+
+- Catalog: `--fits` required for single; `--fitsA` and `--fitsB` required for cross
+- Columns: `X,Y,Z`
+- HDU: `2`
+- rmin: `5.0`
+- rmax: `60.0`
+- Nr: `55`
+- μmax: `0.9`
+- Nμ: `2`
+- cellsize: `rmax`
+- periodic: `false`
+- Lx,Ly,Lz: `2000.0` (only used if periodic)
+- out: none (no file saved unless `--out` specified)
+
+---
+
+### Output format
+
+The `.npz` file contains:
+
+- `hist` — the 2D histogram array of shape `(Nr, Nμ)`
+
+No metadata or bin edges are saved in this version.
+You can compute bin edges separately in Julia/Python if needed.
+
 ---
 
 ### Defaults summary
