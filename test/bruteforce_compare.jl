@@ -3,7 +3,7 @@ using Test
 using Random
 using LinearAlgebra
 
-include(joinpath(@__DIR__, "..", "src", "triangles.jl"))
+using TriCo
 
 # ----- Helpers matching src/triangles.jl --------------------------------------------------------
 @inline function mu_true_los(xi,yi,zi, xj,yj,zj)
