@@ -6,7 +6,9 @@
 #   - TriCo.count_triangles_periodic_grid!         (periodic, min-image, z-LOS)
 #   - TriCo.count_triangles_mixed!(A,B,C)          (non-periodic, mixed catalogs)
 #   - TriCo.count_triangles_mixed_periodic!(A,B,C) (periodic, mixed catalogs)
-# Save ONLY the 4D histogram array to .npz (key = "hist").
+# Save the 4D histogram array to .npz (key = "hist").
+# Always also save counts of objects as scalar keys: "N_A", "N_B", "N_C".
+# If --logtime is true, also save wall-clock runtime in seconds as "runtime_sec".
 # --------------------------------------------------------------
 
 using TriCo
@@ -79,7 +81,10 @@ function usage()
       --pattern AAB|ABB|ABC        which vertices come from which catalogs (default depends on inputs)
 
     Output:
-      --out triangles.npz          save ONLY the histogram to NPZ (key: "hist")
+      --out triangles.npz          save results to NPZ (keys: 'hist', 'N_A','N_B','N_C', and 'runtime_sec' if --logtime)
+
+    Profiling/Logging:
+      --logtime                    if provided/true, include total runtime (sec) as 'runtime_sec' in the NPZ (default: false)
     """)
 end
 
@@ -115,6 +120,7 @@ end
 
 function main()
     d = parse_args(ARGS)
+    start_ns = time_ns()  # wall-clock start
     single = haskey(d, "--fits")
     mixed  = any(haskey(d, k) for k in ("--fitsA","--fitsB","--fitsC"))
     if !(single || mixed)
@@ -139,6 +145,9 @@ function main()
     Lx = getopt_float(d, "--Lx", 2000.0)
     Ly = getopt_float(d, "--Ly", 2000.0)
     Lz = getopt_float(d, "--Lz", 2000.0)
+
+    # logging?
+    logtime = getopt_bool(d, "--logtime", false)
 
     # output path (optional)
     outpath = getopt(d, "--out", "")
@@ -192,8 +201,19 @@ function main()
         println("Nonzero bins   : ", count(!=(0), H.h), " / ", Nr*Nr*Nmu*Nmu)
 
         if !isempty(outpath)
-            NPZ.npzwrite(outpath, Dict("hist" => H.h))
-            println("Saved NPZ (hist only) -> $(outpath)")
+            dict = Dict(
+                "hist" => H.h,
+                "N_A" => length(X),
+                "N_B" => 0,
+                "N_C" => 0,
+            )
+            if logtime
+                runtime_sec = (time_ns() - start_ns) / 1e9
+                dict["runtime_sec"] = runtime_sec
+                println("Total runtime (sec): ", runtime_sec)
+            end
+            NPZ.npzwrite(outpath, dict)
+            println("Saved NPZ -> $(outpath)", logtime ? " (with runtime_sec)" : "", " [N_A=$(length(X)), N_B=0, N_C=0]")
         end
         println("Done.")
         return
@@ -286,9 +306,26 @@ function main()
     println("Total triangles: ", sum(H.h))
     println("Nonzero bins   : ", count(!=(0), H.h), " / ", Nr*Nr*Nmu*Nmu)
 
+    # Prepare counts (treat absent B/C as 0 per user preference)
+    N_A = length(XA)
+    N_B = isnothing(XB) ? 0 : length(XB)
+    N_C = isnothing(XC) ? 0 : length(XC)
+
     if !isempty(outpath)
-        NPZ.npzwrite(outpath, Dict("hist" => H.h))
-        println("Saved NPZ (hist only) -> $(outpath)")
+        dict = Dict(
+            "hist" => H.h,
+            "N_A" => N_A,
+            "N_B" => N_B,
+            "N_C" => N_C,
+        )
+        if logtime
+            runtime_sec = (time_ns() - start_ns) / 1e9
+            dict["runtime_sec"] = runtime_sec
+            println("Total runtime (sec): ", runtime_sec)
+        end
+        NPZ.npzwrite(outpath, dict)
+        println("Saved NPZ -> $(outpath)", logtime ? " (with runtime_sec)" : "",
+                " [N_A=$(N_A), N_B=$(N_B), N_C=$(N_C)]")
     end
 
     println("Done.")

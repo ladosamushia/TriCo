@@ -169,7 +169,14 @@ It supports both **single-catalog** and **mixed-catalog** counting.
 ### Single catalog (AAA)
 
 ```bash
-JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl   --fits galaxies.fits   --xcol X --ycol Y --zcol Z --hdu 2   --rmin 5 --rmax 60 --Nr 55   --mumax 0.9 --Nmu 2   --cellsize 60   --out triangles.npz
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
+  --fits galaxies.fits \
+  --xcol X --ycol Y --zcol Z --hdu 2 \
+  --rmin 5 --rmax 60 --Nr 55 \
+  --mumax 0.9 --Nmu 2 \
+  --cellsize 60 \
+  --out triangles.npz \
+  --logtime
 ```
 
 ### Mixed catalogs (AAB / ABB / ABC)
@@ -177,13 +184,27 @@ JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl   --fits galaxies.
 Two catalogs (default = AAB if `--pattern` omitted):
 
 ```bash
-JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl   --fitsA catA.fits --fitsB catB.fits   --pattern AAB   --rmin 5 --rmax 60 --Nr 55   --mumax 0.9 --Nmu 2   --cellsize 60   --out triangles_AAB.npz
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
+  --fitsA catA.fits --fitsB catB.fits \
+  --pattern AAB \
+  --rmin 5 --rmax 60 --Nr 55 \
+  --mumax 0.9 --Nmu 2 \
+  --cellsize 60 \
+  --out triangles_AAB.npz \
+  --logtime
 ```
 
 Three catalogs (ABC):
 
 ```bash
-JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl   --fitsA catA.fits --fitsB catB.fits --fitsC catC.fits   --pattern ABC   --rmin 5 --rmax 60 --Nr 55   --mumax 0.9 --Nmu 2   --cellsize 60   --out triangles_ABC.npz
+JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_hist.jl \
+  --fitsA catA.fits --fitsB catB.fits --fitsC catC.fits \
+  --pattern ABC \
+  --rmin 5 --rmax 60 --Nr 55 \
+  --mumax 0.9 --Nmu 2 \
+  --cellsize 60 \
+  --out triangles_ABC.npz \
+  --logtime
 ```
 
 Periodic mode (works in both single and mixed):
@@ -203,9 +224,9 @@ Periodic mode (works in both single and mixed):
 - `--fitsC PATH` — mixed mode, catalog C (optional, required for ABC)
 
 **Mixed composition**
-- `--pattern AAB|ABB|ABC` — composition of triangle vertices
-  Defaults:
-  • 2 catalogs → `AAB`
+- `--pattern AAB|ABB|ABC` — composition of triangle vertices  
+  Defaults:  
+  • 2 catalogs → `AAB`  
   • 3 catalogs → `ABC`
 
 **FITS columns (apply globally unless per-catalog given)**
@@ -227,7 +248,26 @@ Periodic mode (works in both single and mixed):
 - `--Lx=2000`, `--Ly=2000`, `--Lz=2000` — box sizes (required if `--periodic`)
 
 **Output**
-- `--out FILE.npz` — save histogram to NPZ (default: none, must end with `.npz`)
+- `--out FILE.npz` — save to NPZ (must end with `.npz`)
+- `--logtime` — include total wall-clock runtime as `runtime_sec`
+
+---
+
+### Output format (`fits_to_hist.jl`)
+
+The `.npz` produced by `fits_to_hist.jl` contains at minimum:
+
+- `hist` — the 4D histogram array of shape `(Nr, Nr, Nμ, Nμ)`
+- `N_A`, `N_B`, `N_C` — **scalar** counts of input objects read from catalogs A, B, C  
+  - Single-catalog mode: `N_A = length(X)`, `N_B = 0`, `N_C = 0`  
+  - Mixed mode: actual counts for provided catalogs; missing catalogs saved as `0`
+
+If `--logtime` is provided, the NPZ also contains:
+- `runtime_sec` — total wall-clock runtime in seconds (Float64)
+
+> **Note:** Bin edges are not currently saved. Compute them as needed in Julia/Python.
+
+---
 
 ## `fits_to_pairs.jl` usage
 
@@ -293,61 +333,15 @@ JULIA_NUM_THREADS=8 julia --project=. scripts/fits_to_pairs.jl \
 - `--Lx=2000`, `--Ly=2000`, `--Lz=2000` — box sizes (required if `--periodic`)
 
 **Output**
-- `--out FILE.npz` — save histogram to NPZ (default: none, must end with `.npz`)
+- `--out FILE.npz` — save histogram to NPZ (must end with `.npz`)
 
 ---
 
-### Defaults summary
-
-- Catalog: `--fits` required for single; `--fitsA` and `--fitsB` required for cross
-- Columns: `X,Y,Z`
-- HDU: `2`
-- rmin: `5.0`
-- rmax: `60.0`
-- Nr: `55`
-- μmax: `0.9`
-- Nμ: `2`
-- cellsize: `rmax`
-- periodic: `false`
-- Lx,Ly,Lz: `2000.0` (only used if periodic)
-- out: none (no file saved unless `--out` specified)
-
----
-
-### Output format
+### Output format (`fits_to_pairs.jl`)
 
 The `.npz` file contains:
 
 - `hist` — the 2D histogram array of shape `(Nr, Nμ)`
-
-No metadata or bin edges are saved in this version.
-You can compute bin edges separately in Julia/Python if needed.
-
----
-
-### Defaults summary
-
-- Catalog: `--fits` required for single mode; `--fitsA/B/C` required for mixed
-- Columns: `X,Y,Z`
-- HDU: `2`
-- rmin: `5.0`
-- rmax: `60.0`
-- Nr: `55`
-- μmax: `0.9`
-- Nμ: `2`
-- cellsize: `rmax`
-- periodic: `false`
-- Lx,Ly,Lz: `2000.0` (only used if periodic)
-- pattern: depends on number of catalogs (AAB if 2, ABC if 3)
-- out: none (no file saved unless `--out` specified)
-
----
-
-### Output format
-
-The `.npz` file contains:
-
-- `hist` — the 4D histogram array of shape `(Nr, Nr, Nμ, Nμ)`
 
 No metadata or bin edges are saved in this version.  
 You can compute bin edges separately in Julia/Python if needed.
@@ -387,11 +381,11 @@ test/
 
 - Only edit `Project.toml` when adding/removing dependencies.
 - `Manifest.toml` is auto-generated.
-- For smoother development, use [Revise.jl](https://timholy.github.io/Revise.jl/stable/) to pick up changes automatically.
+- For smoother development, use Revise.jl to pick up changes automatically.
 
 ---
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT License. See LICENSE for details.
 
