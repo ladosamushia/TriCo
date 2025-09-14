@@ -1,9 +1,11 @@
 # src/triangles_gpu.jl
 module TrianglesGPU
 
+using StaticArrays
+
 using CUDA
 using ..PairsUtils: bin_index_inv   # reuse your scalar bin-indexer on host
-using ..: HistR12R23Mu12Mu13        # your histogram wrapper
+using ..TriCo: HistR12R23Mu12Mu13
 
 # ------------------ Small GPU-safe helpers ------------------
 
@@ -178,7 +180,7 @@ function _kernel_nonperiodic!(
     invΔμ::Float64, Nμ::Int32,
     H::CuDeviceArray{Int32,4},
 )
-    i = (blockIdx().x-1i32) * blockDim().x + threadIdx().x
+    i = (blockIdx().x - Int32(1)) * blockDim().x + threadIdx().x
     Ni = Int32(length(X))
     if i < 1 || i > Ni
         return
@@ -194,8 +196,8 @@ function _kernel_nonperiodic!(
     z0, z1 = clamp_range(iz-1, iz+1, G.nz)
 
     # local neighbor buffer (indices j)
-    nei = ntuple(_->Int32(0), MAX_NEI)  # static NTuple storage
-    m::Int32 = 0
+    nei = MVector{MAX_NEI, Int32}(0)  # mutable, stack/local memory on GPU
+    m = Int32(0)
 
     # gather neighbors j>i with (r, μ) cuts
     @inbounds for cx in x0:x1, cy in y0:y1, cz in z0:z1
@@ -276,7 +278,7 @@ function _kernel_periodic!(
     invΔμ::Float64, Nμ::Int32,
     H::CuDeviceArray{Int32,4},
 )
-    i = (blockIdx().x-1i32) * blockDim().x + threadIdx().x
+    i = (blockIdx().x - Int32(1)) * blockDim().x + threadIdx().x
     Ni = Int32(length(X))
     if i < 1 || i > Ni
         return
@@ -289,8 +291,8 @@ function _kernel_periodic!(
 
     # neighbor shells with periodic wrap
     # local neighbor buffer
-    nei = ntuple(_->Int32(0), MAX_NEI)
-    m::Int32 = 0
+    nei = MVector{MAX_NEI, Int32}(0)  # mutable, stack/local memory on GPU
+    m = Int32(0)
 
     for dx in Int32(-1):Int32(1), dy in Int32(-1):Int32(1), dz in Int32(-1):Int32(1)
         jx = wrap(ix + dx, G.nx)
@@ -400,7 +402,7 @@ function count_triangles_grid_gpu!(X::AbstractVector{<:Real},
     r2max = rmaxf*rmaxf
 
     # Build grid on CPU (reusing your function) and mirror
-    Gcpu = Main.build_grid_nonperiodic(X, Y, Z, cellsize)
+    Gcpu = ..build_grid_nonperiodic(X, Y, Z, cellsize)
     Ggpu = to_gpu_grid(Gcpu)
 
     # Upload coordinates
@@ -444,7 +446,7 @@ function count_triangles_periodic_grid_gpu!(X::AbstractVector{<:Real},
     r2max = rmaxf*rmaxf
 
     # Build periodic grid on CPU then mirror
-    Gcpu = Main.build_grid_periodic(X, Y, Z; Lx=Lx, Ly=Ly, Lz=Lz, cellsize=cellsize)
+    Gcpu = ..build_grid_periodic(X, Y, Z; Lx=Lx, Ly=Ly, Lz=Lz, cellsize=cellsize)
     Ggpu = to_gpu_grid(Gcpu; Lx=Float64(Lx), Ly=Float64(Ly), Lz=Float64(Lz))
 
     dX = CuArray(Float64.(X)); dY = CuArray(Float64.(Y)); dZ = CuArray(Float64.(Z))
