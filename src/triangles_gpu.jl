@@ -5,7 +5,7 @@ using StaticArrays
 
 using CUDA
 using ..PairsUtils: bin_index_inv   # reuse your scalar bin-indexer on host
-using ..TriCo: HistR12R23Mu12Mu13
+using ..: HistR12R23Mu12Mu13, build_grid_nonperiodic, build_grid_periodic
 
 # ------------------ Small GPU-safe helpers ------------------
 
