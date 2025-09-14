@@ -402,7 +402,7 @@ function count_triangles_grid_gpu!(X::AbstractVector{<:Real},
     r2max = rmaxf*rmaxf
 
     # Build grid on CPU (reusing your function) and mirror
-    Gcpu = build_grid_nonperiodic(X, Y, Z, cellsize)
+    Gcpu = TriCo.build_grid_nonperiodic(X, Y, Z, cellsize)
     Ggpu = to_gpu_grid(Gcpu)
 
     # Upload coordinates
@@ -446,7 +446,7 @@ function count_triangles_periodic_grid_gpu!(X::AbstractVector{<:Real},
     r2max = rmaxf*rmaxf
 
     # Build periodic grid on CPU then mirror
-    Gcpu = build_grid_periodic(X, Y, Z; Lx=Lx, Ly=Ly, Lz=Lz, cellsize=cellsize)
+    Gcpu = TriCo.build_grid_periodic(X, Y, Z; Lx=Lx, Ly=Ly, Lz=Lz, cellsize=cellsize)
     Ggpu = to_gpu_grid(Gcpu; Lx=Float64(Lx), Ly=Float64(Ly), Lz=Float64(Lz))
 
     dX = CuArray(Float64.(X)); dY = CuArray(Float64.(Y)); dZ = CuArray(Float64.(Z))
