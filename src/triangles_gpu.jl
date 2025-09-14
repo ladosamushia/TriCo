@@ -1,11 +1,10 @@
 # src/triangles_gpu.jl
 module TrianglesGPU
 
-using StaticArrays
-
 using CUDA
-using ..PairsUtils: bin_index_inv   # reuse your scalar bin-indexer on host
-using ..: HistR12R23Mu12Mu13, build_grid_nonperiodic, build_grid_periodic
+using StaticArrays
+using ..PairsUtils: bin_index_inv
+using ..: HistR12R23Mu12Mu13
 
 # ------------------ Small GPU-safe helpers ------------------
 
@@ -196,7 +195,7 @@ function _kernel_nonperiodic!(
     z0, z1 = clamp_range(iz-1, iz+1, G.nz)
 
     # local neighbor buffer (indices j)
-    nei = MVector{MAX_NEI, Int32}(0)  # mutable, stack/local memory on GPU
+    nei = MVector{MAX_NEI, Int32}(0)
     m = Int32(0)
 
     # gather neighbors j>i with (r, μ) cuts
@@ -226,14 +225,14 @@ function _kernel_nonperiodic!(
     # Triangles from neighbor list
     if m >= 2
         for a in Int32(1):(m-1)
-            j = Base.getindex(nei, a)
+            j = nei[a]
             xj = Float64(X[j]); yj = Float64(Y[j]); zj = Float64(Z[j])
             dxij = xj - xi; dyij = yj - yi; dzij = zj - zi
             r2_ij = dxij*dxij + dyij*dyij + dzij*dzij
             mdij_n, mdij_d = gpu_mu_true_los_numden2(xi,yi,zi, xj,yj,zj)
 
             for b in (a+1):m
-                k = Base.getindex(nei, b)
+                k = nei[b]
                 xk = Float64(X[k]); yk = Float64(Y[k]); zk = Float64(Z[k])
 
                 dxjk = xk - xj; dyjk = yk - yj; dzjk = zk - zj
@@ -291,7 +290,7 @@ function _kernel_periodic!(
 
     # neighbor shells with periodic wrap
     # local neighbor buffer
-    nei = MVector{MAX_NEI, Int32}(0)  # mutable, stack/local memory on GPU
+    nei = MVector{MAX_NEI, Int32}(0)
     m = Int32(0)
 
     for dx in Int32(-1):Int32(1), dy in Int32(-1):Int32(1), dz in Int32(-1):Int32(1)
@@ -326,7 +325,7 @@ function _kernel_periodic!(
 
     if m >= 2
         for a in Int32(1):(m-1)
-            j = Base.getindex(nei, a)
+            j = nei[a]
             xj = Float64(X[j]); yj = Float64(Y[j]); zj = Float64(Z[j])
             dxij = minimg_d(xj - xi, G.hx, G.Lx)
             dyij = minimg_d(yj - yi, G.hy, G.Ly)
@@ -335,7 +334,7 @@ function _kernel_periodic!(
             mdij_n, mdij_d = gpu_mu_z_los_numden2(dxij, dyij, dzij)
 
             for b in (a+1):m
-                k = Base.getindex(nei, b)
+                k = nei[b]
                 xk = Float64(X[k]); yk = Float64(Y[k]); zk = Float64(Z[k])
 
                 dxjk = minimg_d(xk - xj, G.hx, G.Lx)
