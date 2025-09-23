@@ -157,8 +157,9 @@ function main()
     @assert 0.0 < mumax <= 1.0 "μmax must be in (0,1]"
     @assert cellsize >= rmax "cellsize must be ≥ rmax to avoid missing neighbors"
     if periodic
-        @assert all(!isnan.((Lx, Ly, Lz))) "Periodic mode requires --Lx, --Ly, --Lz"
+        @assert all(isfinite, (Lx, Ly, Lz)) "Periodic mode requires numeric --Lx, --Ly, --Lz"
     end
+
     if !isempty(outpath)
         if !endswith(lowercase(outpath), ".npz")
             error("--out must end with .npz")
